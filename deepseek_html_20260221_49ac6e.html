@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFP Caption Engine v8.11</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📰</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <!-- En-tête avec statut session -->
+        <header class="header">
+            <div class="logo">
+                <h1>📰 AFP Caption Engine <span class="version">v8.11</span></h1>
+                <div class="badge-container">
+                    <span class="badge protocol-badge">Protocole compilé</span>
+                    <span class="badge mode-badge" id="modeDisplay">Mode: Général</span>
+                </div>
+            </div>
+            <div class="session-info" id="sessionInfo">
+                <span class="session-status inactive" id="sessionStatus">● Session inactive</span>
+                <span class="session-date" id="sessionDate"></span>
+            </div>
+        </header>
+
+        <!-- Barre de commandes -->
+        <div class="command-bar">
+            <input type="text" id="commandInput" placeholder="Entrez une commande (on 2026-02-21, sport on, template, check, out, etc.)" class="command-input">
+            <button id="executeCommand" class="btn-primary">Exécuter</button>
+            <button id="helpBtn" class="btn-secondary">?</button>
+        </div>
+
+        <!-- Zone principale : entrée/sortie -->
+        <div class="main-grid">
+            <!-- Panneau gauche : saisie brute -->
+            <div class="panel input-panel">
+                <div class="panel-header">
+                    <h3>📝 Légende brute</h3>
+                    <div class="panel-actions">
+                        <button id="clearInput" class="btn-icon" title="Effacer">🗑️</button>
+                        <button id="pasteExample" class="btn-icon" title="Coller un exemple">📋</button>
+                    </div>
+                </div>
+                <textarea id="inputCaption" placeholder="Collez votre légende ici..."></textarea>
+                <div class="input-meta">
+                    <span id="inputStats">0 caractères</span>
+                </div>
+            </div>
+
+            <!-- Panneau droit : résultat -->
+            <div class="panel output-panel">
+                <div class="panel-header">
+                    <h3>✅ Légende AFP conforme</h3>
+                    <div class="panel-actions">
+                        <button id="copyOutput" class="btn-icon" title="Copier">📋</button>
+                        <button id="clearOutput" class="btn-icon" title="Effacer">🗑️</button>
+                    </div>
+                </div>
+                <textarea id="outputCaption" readonly placeholder="Résultat de la transformation..."></textarea>
+                <div class="output-meta">
+                    <span id="outputStats">0 caractères</span>
+                    <span id="processingTime"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre d'outils principale -->
+        <div class="toolbar">
+            <button id="transformBtn" class="btn-primary btn-large">🔄 TRANSFORMER</button>
+            <button id="checkBtn" class="btn-secondary">🔍 CHECK (recherche contexte)</button>
+            <button id="resetBtn" class="btn-secondary">⟲ RESET</button>
+            <button id="exportBtn" class="btn-secondary">📤 Exporter</button>
+        </div>
+
+        <!-- Informations contextuelles -->
+        <div class="context-panel">
+            <div class="tabs">
+                <button class="tab active" data-tab="checklist">📋 Checklist</button>
+                <button class="tab" data-tab="components">🔧 Composants</button>
+                <button class="tab" data-tab="sports">⚽ Mode Sports</button>
+                <button class="tab" data-tab="commands">⌨️ Commandes</button>
+                <button class="tab" data-tab="debug">🐛 Debug</button>
+            </div>
+            
+            <div class="tab-content active" id="checklistTab">
+                <div class="checklist-container" id="checklistDisplay">
+                    <!-- Checklist dynamique -->
+                </div>
+            </div>
+            
+            <div class="tab-content" id="componentsTab">
+                <pre id="componentsDisplay" class="json-display"></pre>
+            </div>
+            
+            <div class="tab-content" id="sportsTab">
+                <div id="sportsDisplay">
+                    <!-- Infos sports mode -->
+                </div>
+            </div>
+            
+            <div class="tab-content" id="commandsTab">
+                <div class="commands-grid" id="commandsList">
+                    <!-- Liste des commandes -->
+                </div>
+            </div>
+            
+            <div class="tab-content" id="debugTab">
+                <pre id="debugDisplay" class="debug-output"></pre>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div>AFP Caption Protocol v8.11 • Moteur exécutable • Session: <span id="footerSession">inactive</span></div>
+            <div>⚠️ Vérification automatique des 13 points (général) / 10 points (sports)</div>
+        </footer>
+    </div>
+
+    <script src="protocol.js"></script>
+    <script src="engine.js"></script>
+    <script src="ui.js"></script>
+</body>
+</html>
