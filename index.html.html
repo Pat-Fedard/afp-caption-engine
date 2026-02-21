@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AFP Caption Engine - Version Claude</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #e10000;
+            margin: 0;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .session-info {
+            background: #e10000;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            margin: 10px 0;
+        }
+        textarea:focus {
+            border-color: #e10000;
+            outline: none;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: #e10000;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+        }
+        .btn-primary:hover {
+            background: #b30000;
+        }
+        .btn-claude {
+            background: #6f2da8;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-claude:hover {
+            background: #5a2385;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .result-box {
+            background: #f8f9fa;
+            border-left: 4px solid #e10000;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            min-height: 100px;
+            font-size: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .instructions {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            border-left: 4px solid #0d6efd;
+        }
+        .step {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .copy-btn {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            float: right;
+        }
+        .examples {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .example-tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+        }
+        .example-tag:hover {
+            background: #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📰 AFP Caption Engine</h1>
+        <div class="subtitle">Protocole v8.11 - Version Claude (100% des règles)</div>
+        
+        <!-- Session info simplifiée -->
+        <div class="status-bar">
+            <span>Session: <span id="sessionStatus">inactive</span></span>
+            <span>Date: <span id="sessionDate">-</span></span>
+            <span class="session-info" id="modeBadge">Mode général</span>
+        </div>
+        
+        <!-- Commandes rapides -->
+        <div class="button-group">
+            <input type="text" id="commandInput" placeholder="Commande (ex: on 2026-02-21)" style="flex: 3; padding: 12px;" value="on 2026-02-21">
+            <button class="btn-secondary" onclick="executeCommand()">Exécuter</button>
+        </div>
+        
+        <!-- Zone de saisie -->
+        <textarea id="inputText" rows="4" placeholder="Entrez votre légende brute..."></textarea>
+        
+        <!-- Boutons d'action -->
+        <div class="button-group">
+            <button class="btn-primary" onclick="copyForClaude()">📋 1. Copier pour Claude</button>
+            <button class="btn-claude" onclick="openClaude()">🤖 2. Ouvrir Claude</button>
+        </div>
+        
+        <!-- Résultat -->
+        <div class="result-box" id="outputText">
+            En attente de la réponse Claude...
+        </div>
+        
+        <!-- Zone de collage de la réponse -->
+        <textarea id="claudeResponse" rows="3" placeholder="Collez ici la réponse de Claude puis cliquez sur Appliquer"></textarea>
+        
+        <div class="button-group">
+            <button class="btn-secondary" onclick="applyClaudeResponse()">✅ Appliquer la réponse</button>
+            <button class="btn-secondary" onclick="clearAll()">🗑️ Effacer</button>
+        </div>
+        
+        <!-- Exemples -->
+        <div class="examples">
+            <span class="example-tag" onclick="setExample('Xavier Piechaczyk dans un atelier')">Xavier Piechaczyk</span>
+            <span class="example-tag" onclick="setExample('Emmanuel Macron inaugure une école')">Macron</span>
+            <span class="example-tag" onclick="setExample('PSG vs Marseille au Parc')">Match</span>
+            <span class="example-tag" onclick="setExample('Entraînement du PSG avant le match')">Entraînement</span>
+            <span class="example-tag" onclick="setExample('Conférence de presse de Deschamps')">Presser</span>
+            <span class="example-tag" onclick="setExample('Manifestation contre la réforme à Paris')">Protestation</span>
+            <span class="example-tag" onclick="setExample('2 le président a déclaré')">Traduction</span>
+        </div>
+        
+        <!-- Instructions permanentes -->
+        <div class="instructions" id="instructionBox">
+            <strong>🤖 Instruction pour Claude :</strong>
+            <p id="claudePrompt">Chargement...</p>
+            <button class="copy-btn" onclick="copyPrompt()">📋 Copier</button>
+        </div>
+    </div>
+
+    <script>
+        // Session simple
+        let session = {
+            active: false,
+            date: null,
+            mode: 'general'
+        };
+        
+        // Protocole complet (version résumée pour le prompt)
+        const AFP_RULES = `
+PROTOCOLE AFP v8.11 - RÈGLES COMPLÈTES À APPLIQUER STRICTEMENT
+
+1. STRUCTURE GÉNÉRALE:
+   - Format: [Protagonistes] + [action] + [contexte] + [lieu] + [date]
+   - Lieu et date TOUJOURS à la fin: "in [ville] on [Month Day, Year]"
+   - Date: jamais de nom de jour, format "February 21, 2026"
+
+2. PERSONNES:
+   - Qualité/profession TOUJOURS avant le nom: "RATP CEO Xavier Piechaczyk"
+   - Pour les étrangers: nationalité + qualité: "Greek Prime Minister Kyriakos Mitsotakis"
+   - Noms composés: tiret ASCII: "Jean-Luc"
+
+3. ORGANISATIONS:
+   - Descripteur obligatoire: "far-right party Rassemblement National (RN)"
+   - Partis politiques: jamais traduits, abréviation entre parenthèses
+
+4. ENTREPRISES:
+   - Minuscules sauf acronymes: "TotalEnergies", mais "IBM", "SNCF", "EDF"
+
+5. ATTRIBUTION L/R:
+   - 2 personnes sans position: "X (L) and Y (R)"
+   - 2 personnes avec position: "X (2ndL) and Y (3rdR)"
+   - Plus de 2 personnes en ligne: "(LtoR) X, Y and Z"
+
+6. MODE SPORTS:
+   - Nom du sport explicite: "Champions League football match"
+   - Format possessif: "[Club]'s [player]" (jamais "of")
+   - Stade: nom officiel + tiret si défunt: "Stade Raymond-Kopa"
+   - Échauffement: "takes part in warm-up" (jamais "pictured in action")
+   - Célébrations: "his team's 2nd goal" / "after the match"
+
+7. MODE TEMPLATE:
+   - Commence par "xxxxxx"
+   - Date session par défaut
+   - Personne mentionnée = qualité avant nom
+   - Contexte judiciaire: "arrives at courthouse to attend a hearing"
+
+8. COMMANDE 2 (TRADUCTION):
+   - Traduction brute, fidèle, sans ajout ni structure AFP
+   - Dates: déduction critique: "samedi" + session lundi = "on February 14"
+
+9. ALERTES:
+   - Source en fin: intégrer "according to [source]"
+   - Date différente: "Alert: date is X (session date: Y)"
+
+10. INTERDICTIONS:
+    - Jamais de "during" pour les célébrations de victoire
+    - Jamais "pictured" sans "is"
+    - Jamais de "of" pour les joueurs
+    - Jamais de noms de jours dans les dates
+    - Jamais de traduction des noms de partis
+
+11. CHECKLIST 13 POINTS (mode général):
+    - Qualité avant nom pour chaque personne
+    - Descripteur pour chaque organisation
+    - Entreprises en minuscules (sauf acronymes)
+    - Attribution L/R correcte
+    - Verbe présent et conjugué
+    - Sport explicite si contexte sportif
+    - Stade recherché si manquant
+    - Échauffement: "takes part in warm-up"
+    - Précision régionale préservée
+    - Parti politique + abréviation
+    - Lieu + date à la fin
+    - Format date sans jour
+    - ASCII (tirets -, apostrophes ')
+
+12. CHECKLIST 10 POINTS (mode sports):
+    - Sport explicitement nommé
+    - Format possessif [Club]'s [player]
+    - Attribution L/R ou spécifique
+    - Qualité avant nom
+    - Stade officiel
+    - Compétition officielle
+    - Échauffement correct
+    - Célébrations précises
+    - Lieu + date à la fin
+    - Numéros maillots (#10)
+`;
+        
+        // Mettre à jour l'affichage
+        function updateUI() {
+            document.getElementById('sessionStatus').innerText = session.active ? 'active' : 'inactive';
+            document.getElementById('sessionDate').innerText = session.date || '-';
+            
+            let mode = 'Mode général';
+            if (session.mode === 'sports') mode = 'Mode SPORTS';
+            if (session.mode === 'template') mode = 'Mode TEMPLATE';
+            document.getElementById('modeBadge').innerText = mode;
+        }
+        
+        // Exécuter les commandes
+        function executeCommand() {
+            const cmd = document.getElementById('commandInput').value.trim();
+            
+            if (cmd.startsWith('on ')) {
+                session.active = true;
+                session.date = cmd.substring(3).trim();
+                session.mode = 'general';
+                updateUI();
+                updatePrompt();
+                alert('✅ Session activée: ' + session.date);
+            }
+            else if (cmd === 'off') {
+                session.active = false;
+                session.date = null;
+                session.mode = 'general';
+                updateUI();
+                updatePrompt();
+                alert('❌ Session désactivée');
+            }
+            else if (cmd === 'sport on') {
+                if (!session.active) return alert('Activez d\'abord une session');
+                session.mode = 'sports';
+                updateUI();
+                updatePrompt();
+                alert('⚽ Mode sports activé');
+            }
+            else if (cmd === 'template') {
+                if (!session.active) return alert('Activez d\'abord une session');
+                session.mode = 'template';
+                updateUI();
+                updatePrompt();
+                alert('📝 Mode template activé');
+            }
+            else if (cmd === 'out') {
+                session.mode = 'general';
+                updateUI();
+                updatePrompt();
+                alert('⬅️ Retour mode général');
+            }
+            else {
+                alert('Commandes: on YYYY-MM-DD, off, sport on, template, out');
+            }
+        }
+        
+        // Mettre à jour le prompt pour Claude
+        function updatePrompt() {
+            let modeInstruction = '';
+            if (session.mode === 'sports') {
+                modeInstruction = '🔴 MODE SPORTS ACTIF - Applique la checklist 10 points';
+            } else if (session.mode === 'template') {
+                modeInstruction = '🔴 MODE TEMPLATE ACTIF - Génère une légende commençant par "xxxxxx"';
+            }
+            
+            const prompt = `Tu es un expert du protocole AFP v8.11. Applique STRICTEMENT toutes les règles suivantes :
+
+${AFP_RULES}
+
+${modeInstruction ? '**' + modeInstruction + '**\n' : ''}
+${session.active ? 'Date de session: ' + session.date + '\n' : ''}
+
+Légende à traiter: [COLLER LA LÉGENDE ICI]
+
+Réponds UNIQUEMENT avec la légende AFP conforme, sans commentaires ni explications.`;
+            
+            document.getElementById('claudePrompt').innerText = prompt;
+        }
+        
+        // Copier pour Claude
+        function copyForClaude() {
+            const input = document.getElementById('inputText').value.trim();
+            if (!input) {
+                alert('Entrez d\'abord une légende');
+                return;
+            }
+            
+            let prompt = document.getElementById('claudePrompt').innerText;
+            prompt = prompt.replace('[COLLER LA LÉGENDE ICI]', input);
+            
+            navigator.clipboard.writeText(prompt).then(() => {
+                alert('✅ Prompt copié !\n\nAllez dans "2. Ouvrir Claude" et collez-le (Ctrl+V)');
+            });
+        }
+        
+        // Ouvrir Claude
+        function openClaude() {
+            window.open('https://claude.ai/new', '_blank');
+        }
+        
+        // Copier le prompt seul
+        function copyPrompt() {
+            navigator.clipboard.writeText(document.getElementById('claudePrompt').innerText);
+            alert('✅ Prompt copié');
+        }
+        
+        // Appliquer la réponse de Claude
+        function applyClaudeResponse() {
+            const response = document.getElementById('claudeResponse').value.trim();
+            if (!response) {
+                alert('Collez d\'abord la réponse de Claude');
+                return;
+            }
+            document.getElementById('outputText').innerText = response;
+            document.getElementById('claudeResponse').value = '';
+        }
+        
+        // Effacer tout
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('outputText').innerText = 'En attente de la réponse Claude...';
+            document.getElementById('claudeResponse').value = '';
+        }
+        
+        // Charger un exemple
+        function setExample(text) {
+            document.getElementById('inputText').value = text;
+        }
+        
+        // Initialisation
+        updatePrompt();
+        updateUI();
+    </script>
+</body>
+</html>
