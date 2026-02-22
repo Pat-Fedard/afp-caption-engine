@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFP Caption Protocol v8.12</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f; --surface: #161618; --surface2: #1e1e21;
+    --border: #2a2a2e; --border2: #3a3a3f;
+    --accent: #e8c84a; --accent2: #b8991f;
+    --text: #e8e8ea; --text2: #9a9aa8; --text3: #5a5a68;
+    --red: #e05c5c; --green: #5ce08a; --blue: #5ca8e0;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; }
+  header { border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; background: var(--bg); z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-badge { background: var(--accent); color: #000; font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 2px 7px; letter-spacing: 0.08em; }
+  .logo-text { font-family: var(--mono); font-size: 13px; color: var(--text2); letter-spacing: 0.04em; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .status-pill { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text3); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); transition: background 0.3s; }
+  .status-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .session-display { font-family: var(--mono); font-size: 11px; color: var(--accent); background: rgba(232,200,74,0.08); border: 1px solid rgba(232,200,74,0.2); padding: 3px 10px; }
+  #api-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 12px; }
+  #api-bar label { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.08em; }
+  #api-key-input { flex: 1; background: var(--bg); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 6px 10px; outline: none; transition: border-color 0.2s; }
+  #api-key-input:focus { border-color: var(--accent); }
+  #api-key-input::placeholder { color: var(--text3); }
+  #api-key-input.error { border-color: var(--red); }
+  #api-bar-msg { font-family: var(--mono); font-size: 11px; min-width: 160px; }
+  .btn-sm { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 11px; padding: 6px 14px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active-btn { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  .btn-sm:disabled { opacity: 0.4; cursor: default; }
+  main { flex: 1; display: grid; grid-template-columns: 200px 1fr 1fr; height: calc(100vh - 52px - 44px); }
+  aside { border-right: 1px solid var(--border); overflow-y: auto; padding: 16px 0; }
+  .sidebar-section { padding: 0 16px 16px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .sidebar-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; padding-top: 12px; }
+  .cmd-btn { display: block; width: 100%; text-align: left; background: transparent; border: none; color: var(--text2); font-family: var(--mono); font-size: 12px; padding: 5px 8px; cursor: pointer; border-radius: 2px; transition: all 0.12s; }
+  .cmd-btn:hover { background: var(--surface2); color: var(--text); }
+  .cmd-btn .cmd-key { color: var(--accent); margin-right: 6px; }
+  .cmd-btn .cmd-desc { font-size: 10px; color: var(--text3); display: block; padding-left: 14px; }
+  .session-form { display: flex; flex-direction: column; gap: 6px; }
+  #session-date-input { background: var(--bg); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 11px; padding: 5px 8px; outline: none; width: 100%; }
+  #session-date-input:focus { border-color: var(--accent); }
+  .mode-indicator { font-family: var(--mono); font-size: 10px; padding: 4px 8px; border: 1px solid var(--border); color: var(--text3); text-align: center; margin: 0 16px 8px; }
+  .mode-indicator.sport-mode { border-color: var(--green); color: var(--green); background: rgba(92,224,138,0.06); }
+  .mode-indicator.template-mode { border-color: var(--blue); color: var(--blue); background: rgba(92,168,224,0.06); }
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+  .panel-header { border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; height: 40px; }
+  .panel-title { font-family: var(--mono); font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+  textarea { flex: 1; background: var(--surface); border: none; color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.65; padding: 20px; resize: none; outline: none; }
+  textarea::placeholder { color: var(--text3); }
+  textarea:focus { background: var(--surface2); }
+  .output-panel { display: flex; flex-direction: column; }
+  #output-area { flex: 1; overflow-y: auto; padding: 20px; }
+  .output-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--text3); }
+  .output-empty-icon { font-size: 32px; opacity: 0.3; }
+  .output-empty-text { font-family: var(--mono); font-size: 12px; text-align: center; line-height: 1.6; }
+  .message { margin-bottom: 20px; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none} }
+  .message-role { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; color: var(--text3); }
+  .message-content { font-family: var(--mono); font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .message-content.alert-msg { color: var(--red); }
+  .message-content.caption-out { background: var(--surface2); border-left: 3px solid var(--accent); padding: 12px 16px; }
+  .user-message .message-content { color: var(--text2); font-size: 12px; }
+  .bottom-bar { border-top: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 8px; background: var(--bg); }
+  #main-input { flex: 1; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 13px; padding: 8px 14px; outline: none; transition: border-color 0.2s; resize: none; height: 38px; line-height: 1.5; }
+  #main-input:focus { border-color: var(--accent); background: var(--surface2); }
+  #main-input::placeholder { color: var(--text3); }
+  .send-btn { background: var(--accent); border: none; color: #000; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 0 18px; height: 38px; cursor: pointer; transition: background 0.15s; }
+  .send-btn:hover { background: var(--accent2); }
+  .send-btn:disabled { background: var(--border); color: var(--text3); cursor: default; }
+  .copy-btn { background: transparent; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 10px; padding: 2px 8px; cursor: pointer; transition: all 0.15s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .change-key-btn { font-family: var(--mono); font-size: 11px; color: var(--text3); background: transparent; border: 1px solid var(--border2); padding: 3px 10px; cursor: pointer; transition: all 0.15s; }
+  .change-key-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .provider-badge { font-family: var(--mono); font-size: 10px; color: var(--blue); border: 1px solid var(--blue); padding: 2px 8px; opacity: 0.7; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-badge">AFP</span>
+    <span class="logo-text">Caption Protocol v8.12</span>
+  </div>
+  <div class="header-right">
+    <span class="provider-badge">DeepSeek</span>
+    <div class="status-pill">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">no session</span>
+    </div>
+    <div class="session-display" id="session-display" style="display:none"></div>
+    <button class="change-key-btn" onclick="showApiBar()" title="Change API key">API key</button>
+  </div>
+</header>
+
+<div id="api-bar">
+  <label>DeepSeek API KEY</label>
+  <input type="password" id="api-key-input" placeholder="sk-..." autocomplete="off">
+  <span id="api-bar-msg"></span>
+  <button class="btn-sm active-btn" id="save-key-btn" onclick="saveKey()">Save</button>
+  <a href="https://platform.deepseek.com/api_keys" target="_blank" class="btn-sm" style="text-decoration:none;color:var(--text2)">Get key ↗</a>
+</div>
+
+<main>
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Session</div>
+      <div class="session-form">
+        <input type="date" id="session-date-input">
+        <button class="btn-sm active-btn" onclick="startSession()">Start session</button>
+        <button class="btn-sm" onclick="sendCommand('off')">End session</button>
+      </div>
+    </div>
+
+    <div id="mode-display" class="mode-indicator" style="display:none">NORMAL MODE</div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Commands</div>
+      <button class="cmd-btn" onclick="sendCommand('check')"><span class="cmd-key">check</span><span class="cmd-desc">Search online context</span></button>
+      <button class="cmd-btn" onclick="sendCommand('change')"><span class="cmd-key">change</span><span class="cmd-desc">Apply session date</span></button>
+      <button class="cmd-btn" onclick="sendCommand('template')"><span class="cmd-key">template</span><span class="cmd-desc">Template mode ON</span></button>
+      <button class="cmd-btn" onclick="sendCommand('out')"><span class="cmd-key">out</span><span class="cmd-desc">Exit any mode</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sports Mode</div>
+      <button class="cmd-btn" onclick="startSports()"><span class="cmd-key">sport on</span><span class="cmd-desc">Activate sports mode</span></button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Reports</div>
+      <button class="cmd-btn" onclick="sendCommand('fiche')"><span class="cmd-key">fiche</span><span class="cmd-desc">End of day report</span></button>
+      <button class="cmd-btn" onclick="sendCommand('help')"><span class="cmd-key">help</span><span class="cmd-desc">Show all commands</span></button>
+    </div>
+  </aside>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Source Caption</span>
+      <button class="btn-sm" onclick="clearInput()">Clear</button>
+    </div>
+    <textarea id="source-input" placeholder="Paste your caption here, or type any command...&#10;&#10;Examples:&#10;• A raw caption to correct&#10;• 2 [French text to translate]"></textarea>
+  </div>
+
+  <div class="output-panel">
+    <div class="panel-header">
+      <span class="panel-title">AFP Output</span>
+      <button class="copy-btn" onclick="copyLast()" id="copy-btn" style="display:none">Copy last</button>
+    </div>
+    <div id="output-area">
+      <div class="output-empty" id="empty-state">
+        <div class="output-empty-icon">⬡</div>
+        <div class="output-empty-text">Enter your DeepSeek API key and start a session.<br>Then paste a caption or type a command.<br><br>Get a free key at platform.deepseek.com</div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <textarea id="main-input" placeholder="Caption or command..." rows="1" onkeydown="handleKey(event)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Send ↵</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const PROXY_URL = 'https://afp-proxy.romain-tarlet1.workers.dev';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+
+const SYSTEM_PROMPT = `You are an AFP caption correction assistant operating under the AFP Caption Protocol v8.12.
+
+=== SESSION & COMMANDS ===
+- on [date]: activate session, set session date
+- off: deactivate session
+- out: exit ANY active sub-mode (template OR sports)
+- 2 [text]: translation from French to English, strictly faithful, no AFP structure, no additions. If source already in English: apply AFP corrections + date deduction if day name present.
+- change: after date alert, regenerate using session date
+- check: ALWAYS search online for context/missing info. For live sports results: search directly '[team A] [team B] score' on Google or Flashscore.
+- template / templates: activate template mode (stays active until 'out')
+- sport on [date]: activate sports mode (10-point checklist)
+- match [A] vs [B]: generate match template
+- training [team]: generate training template
+- presser [team]: generate press conference template
+- fiche: end of day report
+- help: display commands
+
+=== FUNDAMENTAL PRINCIPLES ===
+1. ABSOLUTE NEUTRALITY: no subjective adjectives, no interpretation, no invention, no amplification
+2. Never remove explicitly mentioned context (electoral campaign, competition, conflict, protest reason)
+3. OUTPUT: final caption only, no comments, no explanations (except date alerts)
+4. SENTENCE STRUCTURE: Every caption must have a main verb. Format: [Subject] + [verb] + [complement/context] + [location] + [date]
+5. TECHNICAL FORMAT: ASCII strict. Dash: - | Apostrophe: ' | Quotes: " " | One sentence.
+6. LANGUAGE: Any non-English language in a caption must be translated into English, except proper names, political party names, and acronyms.
+7. NATIONAL/LOCAL CONCEPTS: Use best English translation followed by original term in parentheses. Example: contract entertainment workers (intermittents du spectacle).
+
+=== CAPTION STRUCTURE ===
+Order: protagonists + action + location + context/motive + date
+Location + date: ALWAYS at end. Format: ... in [City][, regional precision] on [Month] [day], [year]
+DATE: [Month] [day], [year] - NEVER day names. Missing date: add session date, no alert.
+LOCATION: Country FORBIDDEN. Cities and regions allowed. Preserve regional precision.
+STADIUM: Use exact official name if found. If not found or uncertain: 'in [city]' without any stadium mention.
+Stadiums named after deceased persons: ASCII dash (Stade Jean-Dauger, Stade Raymond-Kopa, Stade Chaban-Delmas, Stade Marcel-Deflandre, Stade Pierre-Mauroy, Stade Yves-Allainmat)
+
+PERSONS: Quality/profession/role BEFORE name for ALL persons (no exceptions)
+Applies to: main protagonists, (LtoR), 'in attendance of', indirect references. Compound first names: ASCII dash.
+ORGANIZATIONS: type/political orientation before name.
+COMPANIES: lowercase except unpronounceable acronyms (IBM, SNCF, EDF, LVMH).
+
+ATTRIBUTION (L)/(R):
+- Single person: NEVER
+- 2 named, no positioning: (L) and (R) automatically
+- 2 named, specific positioning: (2ndL), (3rdR), (C), (top R), etc.
+- 3+ with LtoR: (LtoR) at beginning
+- 3+ no positioning: no attribution
+- Tennis exception: no (L)/(R)
+
+VERBS: prefer active. Always 'is pictured' not 'pictured' alone.
+JUDICIAL: NEVER 'during' - 'arrives at court for' or 'leaves the courthouse after'
+FOREIGN EVENTS: [Event name], [brief English explanation], as part of [international celebration],
+
+=== POLITICAL & OFFICIAL ===
+NEVER translate party names: Rassemblement National, Parti Socialiste, Les Republicains, La France Insoumise
+ALWAYS include abbreviation: RN, PS, LFI, LR, EELV, LO
+Photo poses: 'pose' not 'pose for the photographer'
+Press conference, no known motive: 'gives a press conference' (NEVER invent)
+
+=== SPORTS RULES ===
+SPORT NAME: ALWAYS explicitly name the sport in ALL sports contexts (MANDATORY)
+PLAYERS: [Club]'s [player name] - NEVER 'of'
+LEAGUES: Belgian Pro League | Belgian Challenger Pro League | Dutch Eredivisie | Italian Serie A | French L1 | Spanish La Liga | English Premier League | German Bundesliga
+WARM-UP: NEVER 'pictured in action'. Use: 'takes part in the warm-up' / 'practices' / 'walks on the pitch'
+GOALS: 'celebrates after scoring his team's Xth goal'
+VICTORY: 'after the match' or 'during the trophy ceremony' - NEVER 'during'
+RUGBY: always 'rugby union' for 15-a-side
+TENNIS: Country's Player 1 hits a return to Country's Player 2 during their [City] ATP/WTA tournament tennis match. Nationality mandatory. No (L)/(R). Remove sponsor names.
+JERSEY NUMBERS: preserve if present (#10, #23)
+
+SPORTS TEMPLATES:
+Match: xxxxxx during the [competition] [SPORT] match between [team A] and [team B] at [stadium] in [city] on [date].
+Training: xxxxxx takes part in the warm-up ahead of [team]'s [competition] [SPORT] match against [opponent] in [city] on [date].
+Presser: xxxxxx gives a press conference on the eve of [team]'s [competition] [SPORT] match against [opponent] in [city] on [date].
+
+=== 10-POINT SPORTS CHECKLIST (sports mode ON) ===
+1. SPORT NAME: explicit - MANDATORY
+2. PLAYERS: [Club]'s possessive
+3. ATTRIBUTION: rules above
+4. QUALITY BEFORE NAME: each person individually
+5. STADIUM: official name if found, otherwise 'in [city]'. Deceased -> ASCII dash.
+6. COMPETITION: full official name
+7. WARM-UP/TRAINING: correct verbs
+8. CELEBRATIONS: goals Xth, victory 'after'
+9. STRUCTURE: location + date at end
+10. JERSEY NUMBERS: preserve
+
+=== NON-SPORTS TEMPLATE MODE ===
+All templates start with xxxxxx. Session date by default. NEVER country. Never non-photographed persons' names.
+PERSON: xxxxxx [Quality] [Name] visits/attends...
+JUDICIAL: xxxxxx arrives at [city]'s courthouse to attend a hearing of [trial details] in [city] on [date]. NEVER 'during'.
+SPORTS PRESSER: auto-search next match. Sport MANDATORY. 'on the eve of' / 'ahead of'.
+PROTESTS: preserve motive always.
+MUNICIPAL ELECTIONS: add election dates context.
+
+=== AFP ALERTS ===
+Detection: telegraphic + no verb + no location + source in parentheses
+Source = protagonist: 'announced'. Source not protagonist: 'according to a police source', etc.
+DATE ALERT: only if different from session date / impossible / incoherent / wrong format
+Format: Alert: date is [source date] (session date: [session date]).
+After alert: original preserved. Modification requires 'change'.
+
+=== COMMAND 2 - DATE DEDUCTION ===
+Day name detected -> count back from session date. Output: [Month] [Day], [Year]. No day names. Must be past.
+Session Sat: Mon:-5|Tue:-4|Wed:-3|Thu:-2|Fri:-1|Sat:-7|Sun:-6
+Session Mon: Mon:-7|Tue:-6|Wed:-5|Thu:-4|Fri:-3|Sat:-2|Sun:-1
+Session Tue: Mon:-1|Tue:-7|Wed:-6|Thu:-5|Fri:-4|Sat:-3|Sun:-2
+Session Wed: Mon:-2|Tue:-1|Wed:-7|Thu:-6|Fri:-5|Sat:-4|Sun:-3
+Session Thu: Mon:-3|Tue:-2|Wed:-1|Thu:-7|Fri:-6|Sat:-5|Sun:-4
+Session Fri: Mon:-4|Tue:-3|Wed:-2|Thu:-1|Fri:-7|Sat:-6|Sun:-5
+Session Sun: Mon:-6|Tue:-5|Wed:-4|Thu:-3|Fri:-2|Sat:-1|Sun:-7
+
+=== 13-POINT CHECKLIST (sports mode OFF) ===
+1. PERSONS: quality before name, each individually
+2. ORGANIZATIONS: descriptor present
+3. COMPANIES: lowercase rule
+4. ATTRIBUTION: rules above
+5. VERB: present and correct
+6. SPORT MENTION: explicit if sports context
+7. STADIUM: official name or 'in [city]'
+8. WARM-UP: correct verbs
+9. REGIONAL PRECISION: preserve
+10. POLITICAL PARTY: no translation + abbreviation
+11. STRUCTURE: location + date at end
+12. DATE: [Month] [day], [year], no day name
+13. ASCII: -, ', " "`;
+
+let apiKey = localStorage.getItem('afp_deepseek_key') || '';
+let sessionDate = '';
+let sportsMode = false;
+let templateMode = false;
+let conversationHistory = [];
+let lastCaption = '';
+
+if (apiKey) {
+  document.getElementById('api-key-input').value = apiKey;
+  document.getElementById('api-bar').style.display = 'none';
+  enableSend();
+}
+
+const today = new Date();
+document.getElementById('session-date-input').value =
+  `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+function showApiBar() {
+  document.getElementById('api-bar').style.display = 'flex';
+  document.getElementById('api-key-input').focus();
+  document.getElementById('api-bar-msg').textContent = '';
+  document.getElementById('api-key-input').classList.remove('error');
+}
+
+async function saveKey() {
+  const input = document.getElementById('api-key-input');
+  const msg = document.getElementById('api-bar-msg');
+  const btn = document.getElementById('save-key-btn');
+  const candidate = input.value.trim();
+  if (!candidate) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  msg.style.color = 'var(--text3)';
+  msg.textContent = 'Validating...';
+  input.classList.remove('error');
+
+  try {
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': candidate,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'ping' }]
+      })
+    });
+    console.log("HTTP status:", response.status);
+    const data = await response.json();
+    console.log("Reponse proxy:", JSON.stringify(data));
+    if (data.error) {
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Invalid key';
+      input.classList.add('error');
+    } else {
+      apiKey = candidate;
+      localStorage.setItem('afp_deepseek_key', apiKey);
+      document.getElementById('api-bar').style.display = 'none';
+      msg.textContent = '';
+      enableSend();
+    }
+  } catch(err) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Network error';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save';
+}
+
+function enableSend() { document.getElementById('send-btn').disabled = false; }
+
+function startSession() {
+  const v = document.getElementById('session-date-input').value;
+  if (!v) return;
+  const d = new Date(v + 'T12:00:00');
+  sessionDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  sendCommand(`on ${sessionDate}`);
+}
+
+function startSports() {
+  if (!sessionDate) { alert('Start a session first'); return; }
+  sendCommand(`sport on ${sessionDate}`);
+  sportsMode = true; updateModeDisplay();
+}
+
+function clearInput() { document.getElementById('source-input').value = ''; }
+function handleKey(e) { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function sendCommand(cmd) { document.getElementById('main-input').value = cmd; sendMessage(); }
+
+function updateModeDisplay() {
+  const el = document.getElementById('mode-display');
+  el.style.display = 'block';
+  if (sportsMode) { el.textContent='SPORTS MODE ON'; el.className='mode-indicator sport-mode'; }
+  else if (templateMode) { el.textContent='TEMPLATE MODE ON'; el.className='mode-indicator template-mode'; }
+  else if (sessionDate) { el.textContent='NORMAL MODE'; el.className='mode-indicator'; }
+  else { el.style.display='none'; }
+}
+
+function updateStatus(state) {
+  const dot=document.getElementById('status-dot');
+  const text=document.getElementById('status-text');
+  const display=document.getElementById('session-display');
+  if(state==='loading'){dot.className='status-dot loading';text.textContent='processing';}
+  else if(state==='active'){dot.className='status-dot active';text.textContent='session active';if(sessionDate){display.style.display='block';display.textContent=sessionDate;}}
+  else{dot.className='status-dot';text.textContent='no session';display.style.display='none';}
+}
+
+async function sendMessage() {
+  const inputEl = document.getElementById('main-input');
+  const sourceEl = document.getElementById('source-input');
+  let userText = inputEl.value.trim();
+  if (!userText && sourceEl.value.trim()) userText = sourceEl.value.trim();
+  if (!userText) return;
+  if (!apiKey) { showApiBar(); return; }
+
+  const cmd = userText.toLowerCase().trim();
+  if (cmd === 'out') { sportsMode=false; templateMode=false; updateModeDisplay(); }
+  if (cmd === 'template' || cmd === 'templates') { templateMode=true; updateModeDisplay(); }
+  if (cmd.startsWith('sport on')) { sportsMode=true; updateModeDisplay(); }
+  if (cmd.startsWith('on ')) { sessionDate=userText.substring(3); updateStatus('active'); updateModeDisplay(); }
+  if (cmd === 'off') { sessionDate=''; updateStatus('idle'); updateModeDisplay(); }
+
+  inputEl.value = '';
+  showMessage('user', userText);
+  document.getElementById('empty-state')?.remove();
+  document.getElementById('send-btn').disabled = true;
+  updateStatus('loading');
+
+  // Build messages for DeepSeek (OpenAI format)
+  const systemContent = sessionDate
+    ? SYSTEM_PROMPT + `\n\n=== CURRENT SESSION ===\nSession date: ${sessionDate}\nSports mode: ${sportsMode?'ACTIVE':'inactive'}\nTemplate mode: ${templateMode?'ACTIVE':'inactive'}`
+    : SYSTEM_PROMPT;
+
+  const messages = [
+    { role: 'system', content: systemContent },
+    ...conversationHistory,
+    { role: 'user', content: userText }
+  ];
+
+  try {
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        max_tokens: 1024,
+        messages: messages
+      })
+    });
+    const data = await response.json();
+
+    if (data.error) {
+      if (data.error.type === 'authentication_error' || response.status === 401) {
+        localStorage.removeItem('afp_deepseek_key');
+        apiKey = '';
+        showApiBar();
+        const msg = document.getElementById('api-bar-msg');
+        msg.style.color = 'var(--red)';
+        msg.textContent = 'Key rejected - please re-enter';
+        document.getElementById('api-key-input').classList.add('error');
+      }
+      showMessage('error', 'API Error: ' + (data.error.message || JSON.stringify(data.error)));
+    } else {
+      const reply = data.content[0].text;
+      conversationHistory.push({ role: 'user', content: userText });
+      conversationHistory.push({ role: 'assistant', content: reply });
+      lastCaption = reply;
+      showMessage('assistant', reply, reply.toLowerCase().startsWith('alert:'));
+      document.getElementById('copy-btn').style.display = 'block';
+    }
+  } catch(err) {
+    showMessage('error', 'Error: ' + err.message);
+  }
+
+  document.getElementById('send-btn').disabled = false;
+  if (sessionDate) updateStatus('active'); else updateStatus('idle');
+}
+
+function showMessage(role, text, isAlert) {
+  const area = document.getElementById('output-area');
+  const div = document.createElement('div');
+  div.className = `message ${role==='user'?'user-message':''}`;
+  const roleEl = document.createElement('div');
+  roleEl.className = 'message-role';
+  roleEl.textContent = role==='user' ? '▸ input' : role==='error' ? '⚠ error' : '◆ afp output';
+  const contentEl = document.createElement('div');
+  contentEl.className = 'message-content' + (isAlert?' alert-msg':role==='assistant'?' caption-out':'');
+  contentEl.textContent = text;
+  div.appendChild(roleEl); div.appendChild(contentEl);
+  area.appendChild(div); area.scrollTop = area.scrollHeight;
+}
+
+function copyLast() {
+  if (!lastCaption) return;
+  navigator.clipboard.writeText(lastCaption).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy last', 1500);
+  });
+}
+</script>
+</body>
+</html>
